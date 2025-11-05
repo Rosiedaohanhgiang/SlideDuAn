@@ -1,0 +1,1738 @@
+<!DOCTYPE html><html lang="vi"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lộ Trình Chuyển Đổi Tăng Tốc | HOAN TT</title>
+    
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tải Font Oswald từ Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+    
+    <!-- Tải Font Awesome cho Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Tải thư viện cho Export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- Tải thư viện cho Biểu đồ (Chart.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* CSS tùy chỉnh cho font chữ và các hiệu ứng */
+        body {
+            font-family: 'Oswald', sans-serif;
+            /* Hình nền môi trường làm việc nhóm hiện đại, với lớp phủ tối */
+            background-image: linear-gradient(rgba(10, 10, 20, 0.85), rgba(10, 10, 20, 0.85)), url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        /* Container Sân khấu chính */
+        #presentation-container {
+            /* Đảm bảo nó chiếm không gian và căn giữa */
+            max-width: 1200px; /* Chiều rộng tối đa của sân khấu */
+            aspect-ratio: 16 / 9; /* Giữ tỷ lệ 16:9 */
+            margin: auto;
+            position: relative;
+        }
+
+        /* Khu vực chứa các slide */
+        #slide-deck {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            /* Thẻ nổi, bo góc, đổ bóng, hiệu ứng kính mờ */
+            background: rgba(26, 35, 126, 0.1); /* Màu xanh đậm #1a237e với 10% opacity */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 0.75rem; /* 12px */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden; /* Quan trọng để giữ nội dung bên trong */
+        }
+
+        /* Định nghĩa một slide */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 3rem 4rem; /* Padding 4 lề khoa học - giảm 1 chút */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Căn giữa theo chiều dọc */
+            align-items: center; /* Căn giữa theo chiều ngang */
+            color: white;
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(0.95);
+            transition: all 0.6s ease-in-out;
+            font-size: 20pt; /* Font chữ tối thiểu */
+            overflow-y: auto; /* Cho phép cuộn nếu nội dung quá dài */
+        }
+        
+        /* Class đặc biệt để tắt transition khi cần */
+        .no-transition {
+            transition: none !important;
+        }
+
+        /* Slide có nội dung căn trái */
+        .slide.align-top-left {
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding-top: 3.5rem;
+        }
+        .slide.align-center-left {
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* Slide đang hoạt động */
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1);
+            z-index: 10;
+        }
+        
+        /* Slide chờ (cho hiệu ứng chuyển tiếp) */
+        .slide.prev {
+            z-index: 5;
+        }
+
+        /* Các phần tử xuất hiện lần lượt (Build Animations) */
+        .build-item {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease-out;
+        }
+
+        .build-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Tùy chỉnh Tiêu đề (contenteditable) */
+        .slide h1, .slide h2, .slide h3, .slide h4 {
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            width: 100%;
+        }
+        .slide h1 { font-size: 3.5rem; line-height: 1.1; } /* 56px */
+        .slide h2 { font-size: 2.5rem; line-height: 1.2; } /* 40px */
+        .slide h3 { font-size: 1.875rem; line-height: 1.25; } /* 30px */
+        .slide p { margin-bottom: 1rem; width: 100%; line-height: 1.6; }
+        .slide ul, .slide ol { margin-left: 2rem; width: 100%; list-style-position: outside; }
+        .slide li { margin-bottom: 0.75rem; }
+
+        /* Tiêu đề dạng câu hoàn chỉnh */
+        .slide-title-sentence {
+            text-align: left;
+            width: 100%;
+            font-size: 2.25rem; /* 36px */
+            font-weight: 500;
+            color: #FF9800; /* Màu cam chủ đạo */
+            border-left: 5px solid #FF9800;
+            padding-left: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Các nút điều khiển & Thanh công cụ (Bên ngoài thẻ) */
+        #controls-wrapper {
+            position: absolute;
+            bottom: -80px; /* Đặt bên dưới thẻ slide */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            z-index: 50;
+            /* Tự động ẩn/hiện */
+            opacity: 0.3;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        /* Dùng group-hover trên body hoặc container cha để kích hoạt */
+        body:hover #controls-wrapper {
+            opacity: 1;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 0.5rem;
+            font-size: 1.25rem;
+            transition: all 0.2s ease;
+        }
+        .control-btn:hover {
+            background: #FF9800; /* Màu cam khi hover */
+            color: #1a237e; /* Màu xanh đậm */
+            transform: scale(1.1);
+        }
+        
+        /* Nút điều hướng trái/phải */
+        #prev-nav-btn, #next-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 50;
+            /* Tự động ẩn/hiện */
+            opacity: 0.3;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        body:hover #prev-nav-btn, body:hover #next-nav-btn {
+            opacity: 1;
+        }
+
+        #prev-nav-btn { left: 1rem; }
+        #next-nav-btn { right: 1rem; }
+        
+
+        /* Thanh tiến trình dạng chấm */
+        #progress-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            margin: 0 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .progress-dot:hover {
+            background: rgba(255, 255, 255, 0.7);
+        }
+        .progress-dot.active {
+            background: #FF9800; /* Màu cam */
+            transform: scale(1.25);
+        }
+
+        /* Số trang */
+        #slide-number {
+            position: absolute;
+            bottom: -70px; /* Dưới thanh điều khiển */
+            right: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1rem;
+            z-index: 40;
+        }
+        
+        /* Footer */
+        #main-footer {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem; /* 12px */
+            color: rgba(255, 255, 255, 0.4);
+            z-index: 100;
+        }
+
+        /* Modal (cho Export, AI, v.v.) */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background: #1a237e; /* Màu xanh đậm */
+            color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 600px;
+            border: 1px solid #5C6BC0;
+        }
+
+        /* Tùy chỉnh [contenteditable] */
+        [contenteditable="true"]:focus {
+            outline: 2px dashed #FF9800; /* Màu cam */
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Các loại nền slide đặc biệt (Tùy chỉnh) */
+        /* Nền cho Title Slide */
+        .slide-bg-title {
+            background: linear-gradient(rgba(26,35,126,0.75), rgba(26,35,126,0.75)), url('https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=80&w=2500&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        /* Nền cho các Mô hình, Sơ đồ */
+        .slide-bg-model {
+            background: radial-gradient(circle, rgba(26,35,126,0.6) 0%, rgba(26,35,126,0.2) 70%);
+        }
+        
+        /* Nền cho các Slide Tiêu đề Phần (Module) */
+        .slide-bg-structure {
+            background: rgba(26, 35, 126, 0.1);
+        }
+        
+        /* Nền cho Q&A/CTA */
+         .slide-bg-cta {
+            background: linear-gradient(rgba(0, 150, 136, 0.7), rgba(0, 150, 136, 0.7)), url('https://images.unsplash.com/photo-1523348837708-15d4a09CFac2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+
+    </style>
+<script src="https://puc.poecdn.net/authenticated_preview_page/syncedState.3f7572448765332f3047.js"></script></head>
+
+<!-- group class trên body để kích hoạt group-hover cho các nút điều khiển -->
+<body class="bg-gray-900 flex items-center justify-center min-h-screen p-4 group">
+
+    <!-- == BEGIN PRESENTATION CONTAINER == -->
+    <!-- Đây là "Sân khấu" chính, nơi chứa slide và các nút điều khiển liên quan -->
+    <div id="presentation-container" class="w-full relative">
+        
+        <!-- Nút điều hướng Trái/Phải (Bên ngoài thẻ) -->
+        <button id="prev-nav-btn" class="control-btn" title="Slide trước (←)">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button id="next-nav-btn" class="control-btn" title="Slide tiếp (→)">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <!-- Thẻ chứa Slide -->
+        <div id="slide-deck">
+            
+            <!-- == SLIDE 1: Title Slide == -->
+            <div class="slide slide-bg-title active" id="slide-1" data-notes="Bắt đầu bằng tuyên bố mạnh mẽ. Nhấn mạnh 'LỘ TRÌNH TĂNG TỐC' để thể hiện sự đáp ứng với yêu cầu của khách hàng.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-3xl font-light tracking-widest" contenteditable="true">LỘ TRÌNH TƯ VẤN TĂNG TỐC</h2>
+                    <h1 class="my-4 text-6xl font-bold text-orange-400" contenteditable="true">KIẾN TẠO TƯƠNG LAI CHO HOAN TT</h1>
+                    <p class="text-2xl mt-4 max-w-4xl" contenteditable="true">Từ Tái cấu trúc Nền tảng trong 4 tháng đến Vận hành Bền vững</p>
+                    <div class="mt-8 border-t-2 border-orange-400 w-24"></div>
+                </div>
+            </div>
+
+            <!-- == [SLIDE MỚI] SLIDE 2: Trái Tim của Sự Thay Đổi == -->
+            <div class="slide" id="slide-2" data-notes="Mục tiêu: 'Nâng tầm' và 'Chạm' ngay từ đầu. Khẳng định vai trò không thể thiếu của họ. Slide này ngay lập tức trao cho họ vị thế quan trọng nhất, tạo ra sự cởi mở và cảm giác được trân trọng.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-5xl font-bold text-orange-400 mb-8" contenteditable="true">Các bạn là Trái Tim của Sự Thay Đổi này.</h2>
+                    <div class="max-w-5xl text-center build">
+                        <p class="text-3xl leading-relaxed build-item" contenteditable="true">"Chiến lược được quyết định ở cấp lãnh đạo cao nhất. Nhưng thành công hay thất bại của nó được quyết định tại các cuộc họp nhóm, trong các cuộc đối thoại 1:1, và qua hành động của các bạn - những nhà quản lý trực tiếp."</p>
+                        <p class="text-3xl mt-8 font-semibold build-item" contenteditable="true">Các bạn không chỉ 'quản lý' sự thay đổi, các bạn là <span class="text-teal-300">'Kiến trúc sư Trưởng'</span> dẫn dắt nó.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == SLIDE 3: New Agenda (Trước là Slide 2) == -->
+            <div class="slide" id="slide-3" data-notes="Đây là thay đổi quan trọng nhất, đáp ứng trực tiếp yêu cầu của khách hàng. Lộ trình mới gồm 3 giai đoạn, tập trung vào 'Sprint' xây nền tảng trong 4 tháng đầu.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-8" contenteditable="true">Lộ Trình Đồng Hành Tăng Tốc 12 Tháng</h2>
+                    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 text-center build">
+                        <div class="bg-orange-900/50 p-6 rounded-lg border-2 border-orange-700 build-item">
+                            <div class="text-5xl text-orange-400 mb-3">1</div>
+                            <h3 class="text-xl font-semibold" contenteditable="true">GĐ 1: SPRINT NỀN TẢNG</h3>
+                            <p class="text-lg mt-2" contenteditable="true">(Tháng 1-4) Chẩn đoán và xây dựng toàn bộ hệ thống cốt lõi: Văn hóa, Cơ cấu, Vai trò, Mục tiêu, Tuyển dụng.</p>
+                        </div>
+                        <div class="bg-indigo-900/50 p-6 rounded-lg border border-indigo-700 build-item">
+                            <div class="text-5xl text-orange-400 mb-3">2</div>
+                            <h3 class="text-xl font-semibold" contenteditable="true">GĐ 2: VẬN HÀNH &amp; TỐI ƯU</h3>
+                            <p class="text-lg mt-2" contenteditable="true">(Tháng 5-9) Triển khai, tinh chỉnh hệ thống và xây dựng cấu phần nâng cao (Lương 3P, Lộ trình phát triển).</p>
+                        </div>
+                        <div class="bg-indigo-900/50 p-6 rounded-lg border border-indigo-700 build-item">
+                            <div class="text-5xl text-orange-400 mb-3">3</div>
+                            <h3 class="text-xl font-semibold" contenteditable="true">GĐ 3: ĐO LƯỜNG &amp; BỀN VỮNG</h3>
+                            <p class="text-lg mt-2" contenteditable="true">(Tháng 10-12) Đo lường hiệu quả chuyển đổi, chứng minh ROI và lên kế hoạch cho năm tiếp theo.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- == SLIDE 4: The Pain Points (Trước là Slide 3) == -->
+            <div class="slide" id="slide-4" data-notes="Trực quan hóa các 'triệu chứng' thay vì chỉ liệt kê. Sử dụng icon và màu sắc để phân biệt. Đây là cách biến những gạch đầu dòng nhàm chán thành một slide trực quan, dễ nhớ.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-4" contenteditable="true">Thế Kẹt: "Đại Dương Đỏ, Thông Điệp Xanh"</h2>
+                    <p class="text-xl mb-6 max-w-4xl mx-auto" contenteditable="true">Hoan TT có "Thông điệp Xanh" (khác biệt, cao cấp) nhưng đang bị kéo vào cuộc chiến vận hành của "Đại dương Đỏ" (cạnh tranh khốc liệt) bởi những vấn đề nội tại sau:</p>
+                    <div class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 build">
+                        <div class="bg-gray-800/50 p-6 rounded-lg text-left build-item">
+                            <i class="fas fa-people-arrows text-4xl text-red-500 mb-4"></i>
+                            <h3 class="text-2xl font-semibold text-red-500" contenteditable="true">Xung Đột &amp; Đổ Lỗi</h3>
+                            <p class="text-xl mt-2" contenteditable="true">Văn hóa Sales và Marketing chưa hỗ trợ, thiếu thống nhất. Gây mất cơ hội, lãng phí chi phí, nội bộ căng thẳng.</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-6 rounded-lg text-left build-item">
+                            <i class="fas fa-comment-slash text-4xl text-yellow-500 mb-4"></i>
+                            <h3 class="text-2xl font-semibold text-yellow-500" contenteditable="true">Thiếu Gắn Kết</h3>
+                            <p class="text-xl mt-2" contenteditable="true">Các bộ phận chưa cởi mở, thông tin tắc nghẽn, quyết định chậm, nhân viên giỏi chán nản.</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-6 rounded-lg text-left build-item">
+                            <i class="fas fa-compass text-4xl text-blue-500 mb-4"></i>
+                            <h3 class="text-2xl font-semibold text-blue-500" contenteditable="true">Thiếu Phương Hướng</h3>
+                            <p class="text-xl mt-2" contenteditable="true">Chưa có mục tiêu rõ ràng, đánh giá hiệu suất cảm tính, nhân viên không có động lực phấn đấu.</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-6 rounded-lg text-left build-item">
+                            <i class="fas fa-puzzle-piece text-4xl text-purple-500 mb-4"></i>
+                            <h3 class="text-2xl font-semibold text-purple-500" contenteditable="true">Nền Tảng "Trống"</h3>
+                            <p class="text-xl mt-2" contenteditable="true">Thiếu toàn bộ công cụ HR. Lãnh đạo mệt mỏi vì xử lý sự vụ, công ty không thể mở rộng quy mô.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == [SLIDE MỚI] SLIDE 5: Chúng Tôi Thấu Hiểu == -->
+            <div class="slide" id="slide-5" data-notes="Mục tiêu: Xây dựng 'Thấu hiểu' và 'Gắn kết' sâu sắc. Slide này 'chạm' vào nỗi đau thật, tạo sự đồng cảm. Nó giải quyết sự kháng cự ngầm rằng 'lại thêm một dự án nữa đè lên đầu tôi'.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-10" contenteditable="true">Chúng Tôi Thấu Hiểu Thực Tế Của Nhà Quản Lý</h2>
+                    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center build">
+                        <div class="bg-red-900/40 p-6 rounded-lg text-left build-item">
+                            <h3 class="text-3xl font-semibold text-red-300 flex items-center gap-3"><i class="fas fa-fire-extinguisher"></i> Thực Tế "Chữa Cháy"</h3>
+                            <p class="mt-4 text-2xl" contenteditable="true">Bạn đang phải 'vá lốp' hàng ngày: xử lý xung đột, thiếu người, quy trình không rõ ràng, nhân viên thiếu động lực...</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-6 rounded-lg text-left build-item">
+                            <h3 class="text-3xl font-semibold text-yellow-300 flex items-center gap-3"><i class="fas fa-battery-quarter"></i> Hệ Quả "Cạn Năng Lượng"</h3>
+                            <p class="mt-4 text-2xl" contenteditable="true">...điều này khiến bạn cạn kiệt năng lượng, không còn thời gian và tâm trí cho việc chiến lược và phát triển đội ngũ.</p>
+                        </div>
+                    </div>
+                    <p class="mt-12 text-3xl text-orange-400 font-semibold build-item max-w-5xl" contenteditable="true">Dự án này không phải để "thêm việc" cho bạn. Nó được thiết kế để <span class="text-white">"giải phóng"</span> bạn khỏi những việc đó.</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 6: SWOT Analysis (Trước là Slide 4) == -->
+            <div class="slide" id="slide-6" data-notes="SWOT là một công cụ kinh điển. Thay vì bảng nhàm chán, tôi dùng layout 4 góc với icon và màu sắc. Thông điệp chính được rút ra ở giữa: 'Kìm hãm bởi điểm yếu nội bộ'.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-8" contenteditable="true">Phân Tích SWOT: Bức Tranh Toàn Cảnh</h2>
+                    <div class="w-full max-w-6xl grid grid-cols-2 gap-4 text-left text-xl build">
+                        <!-- Strengths -->
+                        <div class="bg-teal-800/50 p-4 rounded-lg build-item">
+                            <h3 class="font-bold text-2xl text-teal-300 flex items-center gap-2"><i class="fa-solid fa-star"></i> ĐIỂM MẠNH (S)</h3>
+                            <ul class="list-disc list-inside mt-2 space-y-1">
+                                <li contenteditable="true">S1: Định vị thương hiệu cao cấp, khác biệt.</li>
+                                <li contenteditable="true">S2: Danh mục sản phẩm chất lượng cao, uy tín.</li>
+                                <li contenteditable="true">S3: Sự linh hoạt, nhanh nhạy của doanh nghiệp trẻ.</li>
+                            </ul>
+                        </div>
+                        <!-- Weaknesses -->
+                        <div class="bg-red-800/50 p-4 rounded-lg build-item">
+                            <h3 class="font-bold text-2xl text-red-300 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> ĐIỂM YẾU (W)</h3>
+                            <ul class="list-disc list-inside mt-2 space-y-1">
+                                <li contenteditable="true">W1: Thiếu nền tảng văn hóa, định danh DN.</li>
+                                <li contenteditable="true">W2: Cơ cấu tổ chức, nhân sự chưa chuẩn hóa.</li>
+                                <li contenteditable="true">W3: Phụ thuộc lớn vào nhà sáng lập.</li>
+                            </ul>
+                        </div>
+                        <!-- Opportunities -->
+                        <div class="bg-green-800/50 p-4 rounded-lg build-item">
+                            <h3 class="font-bold text-2xl text-green-300 flex items-center gap-2"><i class="fa-solid fa-lightbulb"></i> CƠ HỘI (O)</h3>
+                            <ul class="list-disc list-inside mt-2 space-y-1">
+                                <li contenteditable="true">O1: Thị trường XNK &amp; Logistics tăng trưởng mạnh.</li>
+                                <li contenteditable="true">O2: Nhu cầu sản phẩm chăm sóc sức khỏe tăng cao.</li>
+                                <li contenteditable="true">O3: Bùng nổ thương mại điện tử.</li>
+                            </ul>
+                        </div>
+                        <!-- Threats -->
+                        <div class="bg-yellow-800/50 p-4 rounded-lg build-item">
+                            <h3 class="font-bold text-2xl text-yellow-300 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> THÁCH THỨC (T)</h3>
+                            <ul class="list-disc list-inside mt-2 space-y-1">
+                                <li contenteditable="true">T1: Cạnh tranh gay gắt từ các đối thủ lớn.</li>
+                                <li contenteditable="true">T2: Yêu cầu ngày càng cao về minh bạch.</li>
+                                <li contenteditable="true">T4: Áp lực giữ chân nhân tài (turnover 25%/năm).</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <p class="mt-6 text-2xl text-orange-400 font-semibold build-item" contenteditable="true">Kết luận: "Brand-Operation Gap" đang khiến Hoan TT không thể tận dụng hết lợi thế "Thông điệp Xanh" của mình trong "Đại dương Đỏ".</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 7: Research Data (Trước là Slide 5) == -->
+            <div class="slide" id="slide-7" data-notes="Slide này liên kết trực tiếp các vấn đề 'mềm' như gắn kết với kết quả kinh doanh 'cứng'. Dữ liệu từ Gallup mang lại sự tin cậy cao và chứng minh ROI của việc đầu tư vào văn hóa.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-2" contenteditable="true">Sức Mạnh Của Sự Gắn Kết: Không Chỉ Là Cảm Xúc, Mà Là Lợi Nhuận</h2>
+                    <p class="text-lg mb-4 italic" contenteditable="true">Nguồn: Nghiên cứu của Gallup về các đơn vị kinh doanh thuộc top 25% so với top 25% cuối về mức độ gắn kết.</p>
+                    <div class="w-full max-w-6xl grid grid-cols-2 lg:grid-cols-3 gap-4 build">
+                        <div class="bg-teal-900/50 p-3 rounded-lg build-item">
+                            <i class="fas fa-chart-pie text-4xl text-teal-300 mb-2"></i>
+                            <p class="text-5xl font-bold">+23%</p>
+                            <p class="text-xl" contenteditable="true">Lợi nhuận</p>
+                        </div>
+                        <div class="bg-teal-900/50 p-3 rounded-lg build-item">
+                            <i class="fas fa-rocket text-4xl text-teal-300 mb-2"></i>
+                            <p class="text-5xl font-bold">+18%</p>
+                            <p class="text-xl" contenteditable="true">Năng suất</p>
+                        </div>
+                        <div class="bg-teal-900/50 p-3 rounded-lg build-item">
+                            <i class="fas fa-star text-4xl text-teal-300 mb-2"></i>
+                            <p class="text-5xl font-bold">+10%</p>
+                            <p class="text-xl" contenteditable="true">Lòng trung thành của KH</p>
+                        </div>
+                        <div class="bg-red-900/50 p-3 rounded-lg build-item">
+                            <i class="fas fa-user-slash text-4xl text-red-300 mb-2"></i>
+                            <p class="text-5xl font-bold">-43%</p>
+                            <p class="text-xl" contenteditable="true">Tỷ lệ nghỉ việc</p>
+                        </div>
+                        <div class="bg-red-900/50 p-3 rounded-lg build-item">
+                            <i class="fas fa-calendar-times text-4xl text-red-300 mb-2"></i>
+                            <p class="text-5xl font-bold">-81%</p>
+                            <p class="text-xl" contenteditable="true">Tỷ lệ vắng mặt</p>
+                        </div>
+                        <div class="bg-red-900/50 p-3 rounded-lg build-item">
+                            <i class="fas fa-shield-alt text-4xl text-red-300 mb-2"></i>
+                            <p class="text-5xl font-bold">-64%</p>
+                            <p class="text-xl" contenteditable="true">Sự cố an toàn</p>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-2xl text-orange-400 font-semibold build-item" contenteditable="true">Đầu tư vào văn hóa và gắn kết là đầu tư trực tiếp vào hiệu quả kinh doanh. Lộ trình này được thiết kế để mang lại những con số đó.</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 8: MODULE 1 TITLE (Trước là Slide 6) == -->
+            <div class="slide slide-bg-structure" id="slide-8" data-notes="Bắt đầu Giai đoạn 1 - SPRINT. Nhấn mạnh mục tiêu xây dựng 'Hệ điều hành Doanh nghiệp v1.0' trong 4 tháng.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <p class="text-2xl tracking-widest" contenteditable="true">GIAI ĐOẠN 1: THÁNG 1-4</p>
+                    <h1 class="text-6xl text-orange-400 my-4" contenteditable="true">SPRINT CHUYỂN ĐỔI NỀN TẢNG</h1>
+                    <p class="text-3xl max-w-4xl mx-auto" contenteditable="true">Mục tiêu: Xây dựng đồng bộ "Hệ Điều Hành Doanh Nghiệp v1.0" để giải quyết các vấn đề cốt lõi về định hướng, cấu trúc, hiệu suất và con người.</p>
+                </div>
+            </div>
+            
+            <!-- == SLIDE 9: Sprint Gantt Chart (Trước là Slide 8) == -->
+            <div class="slide align-center-left" id="slide-9" data-notes="Slide này được chuyển thể từ Gantt chart của v7B, minh họa rõ ràng lộ trình 4 tháng.">
+                <div class="w-full">
+                    <h2 class="text-4xl font-bold mb-10 text-center" contenteditable="true">Hình Dung Lộ Trình Sprint 4 Tháng</h2>
+                    <div class="w-full max-w-5xl mx-auto space-y-8 build">
+                        <!-- Giai đoạn 1 -->
+                        <div class="build-item">
+                            <h3 class="text-2xl font-semibold text-orange-400 mb-2" contenteditable="true">GĐ 1 (Tháng 1-4): BIG BANG - XÂY DỰNG NỀN TẢNG</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-gray-300 text-xl" contenteditable="true">VHDN &amp; Cơ cấu tổ chức</label>
+                                    <div class="w-full bg-gray-700 rounded-full h-8 mt-1"><div class="bg-indigo-600 h-8 rounded-full" style="width: 100%"></div></div>
+                                </div>
+                                <div>
+                                    <label class="text-gray-300 text-xl" contenteditable="true">Vai trò RACI &amp; Hệ thống OKRs</label>
+                                    <div class="w-full bg-gray-700 rounded-full h-8 mt-1"><div class="bg-indigo-600 h-8 rounded-full" style="width: 100%"></div></div>
+                                </div>
+                                <div>
+                                    <label class="text-gray-300 text-xl" contenteditable="true">Hệ thống Tuyển dụng &amp; EVP</label>
+                                    <div class="w-full bg-gray-700 rounded-full h-8 mt-1 relative">
+                                        <div class="bg-indigo-600 h-8 rounded-full" style="width: 100%"></div>
+                                        <div class="absolute right-0 top-0 h-8 w-8 bg-orange-400 rounded-full flex items-center justify-center -mr-3" title="Ra mắt HĐH v1.0">
+                                            <i class="fas fa-star text-black text-sm"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Giai đoạn 2 (from v7B) -->
+                        <div class="build-item">
+                            <h3 class="text-2xl font-semibold text-teal-400 mb-2" contenteditable="true">GĐ 2 (Tháng 5-9): TINH CHỈNH &amp; TỐI ƯU HÓA</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-gray-300 text-xl" contenteditable="true">Xây dựng Khung Năng lực (chi tiết)</label>
+                                    <div class="w-full bg-gray-700 rounded-full h-8 mt-1"><div class="bg-teal-600 h-8 rounded-full" style="width: 80%; margin-left: 20%;"></div></div>
+                                </div>
+                                <div>
+                                    <label class="text-gray-300 text-xl" contenteditable="true">Xây dựng Hệ thống Lương 3P</label>
+                                    <div class="w-full bg-gray-700 rounded-full h-8 mt-1"><div class="bg-teal-600 h-8 rounded-full" style="width: 70%; margin-left: 30%;"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == [SLIDE MỚI] SLIDE 10: Vai Trò Cốt Lõi Của BẠN == -->
+            <div class="slide" id="slide-10" data-notes="Mục tiêu: Tạo 'Đồng thuận' và sự rõ ràng 'Thực chiến'. Sau khi thấy Lộ trình (CÁI GÌ), họ cần biết ngay vai trò của HỌ (LÀM GÌ). Nó định nghĩa rõ 'sự tham gia' là gì, trao quyền và tạo ra 'nhiệt huyết' có định hướng.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-10" contenteditable="true">Lộ Trình Này Cần 3 Vai Trò Then Chốt Từ Bạn</h2>
+                    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 text-center build">
+                        <div class="bg-indigo-900/50 p-6 rounded-lg build-item">
+                            <i class="fas fa-bullhorn text-6xl text-indigo-300 mb-4"></i>
+                            <h3 class="text-3xl font-semibold" contenteditable="true">Người Truyền Thông</h3>
+                            <p class="text-xl mt-3" contenteditable="true">Dịch chiến lược thành ngôn ngữ của đội ngũ. Liên tục trả lời câu hỏi "Tôi được lợi gì?" (WIIFM).</p>
+                        </div>
+                        <div class="bg-teal-900/50 p-6 rounded-lg build-item">
+                            <i class="fas fa-shield-alt text-6xl text-teal-300 mb-4"></i>
+                            <h3 class="text-3xl font-semibold" contenteditable="true">Người Bảo Trợ</h3>
+                            <p class="text-xl mt-3" contenteditable="true">Bảo vệ đội ngũ khỏi các xao lãng. Cung cấp nguồn lực và chủ động gỡ bỏ rào cản cho team.</p>
+                        </div>
+                        <div class="bg-purple-900/50 p-6 rounded-lg build-item">
+                            <i class="fas fa-chalkboard-teacher text-6xl text-purple-300 mb-4"></i>
+                            <h3 class="text-3xl font-semibold" contenteditable="true">Người Huấn Luyện</h3>
+                            <p class="text-xl mt-3" contenteditable="true">Kiên nhẫn áp dụng công cụ mới (OKRs, RACI...). Ghi nhận, củng cố các hành vi mới và ăn mừng chiến thắng nhỏ.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == SLIDE 11: The "Big Bang" Approach (Trước là Slide 7) == -->
+            <div class="slide slide-bg-model" id="slide-11" data-notes="Slide này được lấy cảm hứng từ v7B, nhấn mạnh giải pháp 'Big Bang' - xây dựng toàn bộ khung xương trong 4 tháng đầu.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-4" contenteditable="true">Giải Pháp Đột Phá: "BIG BANG"</h2>
+                    <p class="text-2xl mb-8 max-w-4xl" contenteditable="true">Dựng toàn bộ khung xương nền tảng - "Hệ Điều Hành v1.0" - trong 4 tháng đầu tiên.</p>
+                    <div class="w-full max-w-2xl build-item">
+                        <!-- Re-created SVG from v7B, styled for v7A -->
+                        <svg width="100%" height="300" viewBox="0 0 400 250" class="h-auto w-full max-w-lg">
+                            <circle cx="200" cy="125" r="70" fill="#FF9800"></circle>
+                            <text x="200" y="115" text-anchor="middle" fill="black" font-size="14" font-weight="bold" font-family="Oswald">HỆ ĐIỀU HÀNH</text>
+                            <text x="200" y="135" text-anchor="middle" fill="black" font-size="14" font-weight="bold" font-family="Oswald">DOANH NGHIỆP v1.0</text>
+                            <text x="200" y="155" text-anchor="middle" fill="black" font-size="12" font-family="Oswald">(4 THÁNG)</text>
+                            
+                            <circle cx="50" cy="50" r="30" fill="#5C6BC0" fill-opacity="0.8"></circle>
+                            <text x="50" y="55" text-anchor="middle" fill="white" font-size="10" font-family="Oswald">Văn Hóa</text>
+                            <line x1="140" y1="90" x2="75" y2="65" stroke="#5C6BC0" stroke-width="2"></line>
+                            
+                            <circle cx="350" cy="50" r="30" fill="#5C6BC0" fill-opacity="0.8"></circle>
+                            <text x="350" y="55" text-anchor="middle" fill="white" font-size="10" font-family="Oswald">Cơ Cấu</text>
+                            <line x1="260" y1="90" x2="325" y2="65" stroke="#5C6BC0" stroke-width="2"></line>
+                            
+                            <circle cx="50" cy="200" r="30" fill="#5C6BC0" fill-opacity="0.8"></circle>
+                            <text x="50" y="205" text-anchor="middle" fill="white" font-size="10" font-family="Oswald">Mục Tiêu</text>
+                            <line x1="140" y1="160" x2="75" y2="185" stroke="#5C6BC0" stroke-width="2"></line>
+                            
+                            <circle cx="350" cy="200" r="30" fill="#5C6BC0" fill-opacity="0.8"></circle>
+                            <text x="350" y="205" text-anchor="middle" fill="white" font-size="10" font-family="Oswald">Tuyển Dụng</text>
+                            <line x1="260" y1="160" x2="325" y2="185" stroke="#5C6BC0" stroke-width="2"></line>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == SLIDE 12: Sprint Deliverables Overview (Trước là Slide 9) == -->
+            <div class="slide" id="slide-12" data-notes="Slide này tóm tắt toàn bộ sản phẩm của Sprint 4 tháng. Trực quan hóa các khối công việc để khách hàng thấy rõ lộ trình tăng tốc.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-8" contenteditable="true">Lộ Trình Sprint 4 Tháng: Xây Dựng 5 Trụ Cột Cốt Lõi</h2>
+                    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-5 gap-4 text-center build">
+                        <div class="bg-indigo-900/50 p-4 rounded-lg build-item">
+                            <i class="fas fa-flag text-5xl text-indigo-300 mb-3"></i>
+                            <h3 class="text-2xl font-semibold" contenteditable="true">1. Định Hướng &amp; Văn Hóa</h3>
+                            <p class="text-lg mt-2" contenteditable="true">Tầm nhìn, Sứ mệnh, Giá trị cốt lõi, Sổ tay Văn hóa v1.0.</p>
+                        </div>
+                        <div class="bg-teal-900/50 p-4 rounded-lg build-item">
+                            <i class="fas fa-sitemap text-5xl text-teal-300 mb-3"></i>
+                            <h3 class="text-2xl font-semibold" contenteditable="true">2. Cơ Cấu Tổ Chức</h3>
+                            <p class="text-lg mt-2" contenteditable="true">Sơ đồ tổ chức tối ưu, Mô tả công việc cấp phòng ban.</p>
+                        </div>
+                        <div class="bg-yellow-900/50 p-4 rounded-lg build-item">
+                            <i class="fas fa-tasks text-5xl text-yellow-300 mb-3"></i>
+                            <h3 class="text-2xl font-semibold" contenteditable="true">3. Vai Trò &amp; Trách Nhiệm</h3>
+                            <p class="text-lg mt-2" contenteditable="true">Ma trận phân quyền RACI cho các quy trình cốt lõi.</p>
+                        </div>
+                        <div class="bg-green-900/50 p-4 rounded-lg build-item">
+                            <i class="fas fa-bullseye text-5xl text-green-300 mb-3"></i>
+                            <h3 class="text-2xl font-semibold" contenteditable="true">4. Hiệu Suất &amp; Năng Lực</h3>
+                            <p class="text-lg mt-2" contenteditable="true">Hệ thống OKRs/KPIs, Khung năng lực v1.0.</p>
+                        </div>
+                        <div class="bg-purple-900/50 p-4 rounded-lg build-item">
+                            <i class="fas fa-users-cog text-5xl text-purple-300 mb-3"></i>
+                            <h3 class="text-2xl font-semibold" contenteditable="true">5. Thu Hút Nhân Tài</h3>
+                            <p class="text-lg mt-2" contenteditable="true">Hệ thống tuyển dụng, EVP, Bộ câu hỏi phỏng vấn BEI.</p>
+                        </div>
+                    </div>
+                    <p class="mt-6 text-2xl text-orange-400 font-semibold build-item" contenteditable="true">Kết thúc Sprint, Hoan TT sẽ có một nền tảng vận hành hoàn chỉnh, sẵn sàng cho việc mở rộng.</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 13: Culture & Structure (Trước là Slide 10) == -->
+            <div class="slide align-center-left" id="slide-13" data-notes="Kết hợp 2 yếu tố nền tảng nhất: Văn hóa (linh hồn) và Cơ cấu (xương sống). Điều này cho thấy một cách tiếp cận toàn diện.">
+                <div class="w-full">
+                    <h2 class="text-4xl font-bold mb-10 text-center" contenteditable="true">Sprint Module 1: Xây "Linh Hồn" &amp; "Xương Sống"</h2>
+                    <div class="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left build">
+                        <div class="build-item">
+                            <h3 class="text-3xl font-semibold text-orange-400 flex items-center gap-3"><i class="fas fa-flag"></i> Xây Dựng "Ngôi Sao Bắc Đẩu"</h3>
+                            <p class="mt-2 text-2xl" contenteditable="true">Đồng thuận và ban hành Tuyên bố Tầm nhìn, Sứ mệnh, 5 Giá trị Cốt lõi (đã được "động từ hóa" thành hành vi cụ thể).</p>
+                            <p class="mt-2 text-2xl font-semibold" contenteditable="true">Kết quả: Sổ tay Văn hóa v1.0.</p>
+                        </div>
+                        <div class="build-item">
+                            <h3 class="text-3xl font-semibold text-teal-400 flex items-center gap-3"><i class="fas fa-sitemap"></i> Tái Cấu Trúc Tổ Chức</h3>
+                            <p class="mt-2 text-2xl" contenteditable="true">Thiết kế và ban hành Sơ đồ tổ chức theo mô hình hỗn hợp, tối ưu cho việc hợp tác và mở rộng quy mô.</p>
+                            <p class="mt-2 text-2xl font-semibold" contenteditable="true">Kết quả: Sơ đồ tổ chức v1.0 &amp; MTCV cấp phòng ban.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == SLIDE 14: Roles & Performance (Trước là Slide 11) == -->
+            <div class="slide align-center-left" id="slide-14" data-notes="Kết nối 'Luật chơi' (RACI) với 'Bảng điểm' (OKRs/KPIs). Đây là hai công cụ then chốt để giải quyết vấn đề đổ lỗi và thiếu phương hướng.">
+                <div class="w-full">
+                    <h2 class="text-4xl font-bold mb-10 text-center" contenteditable="true">Sprint Module 2: Làm Rõ "Luật Chơi" &amp; "Bảng Điểm"</h2>
+                    <div class="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left build">
+                        <div class="build-item">
+                            <h3 class="text-3xl font-semibold text-yellow-400 flex items-center gap-3"><i class="fas fa-tasks"></i> Phân Quyền Bằng RACI</h3>
+                            <p class="mt-2 text-2xl" contenteditable="true">Xây dựng ma trận RACI cho 5 quy trình phối hợp quan trọng nhất (VD: Tung sản phẩm mới, Xử lý khiếu nại KH...) để chấm dứt tình trạng chồng chéo, đổ lỗi.</p>
+                            <p class="mt-2 text-2xl font-semibold" contenteditable="true">Kết quả: Ma trận phân quyền v1.0.</p>
+                        </div>
+                        <div class="build-item">
+                            <h3 class="text-3xl font-semibold text-green-400 flex items-center gap-3"><i class="fas fa-bullseye"></i> Chuẩn Hóa Hiệu Suất</h3>
+                            <p class="mt-2 text-2xl" contenteditable="true">Xây dựng hệ thống quản trị mục tiêu (OKRs/KPIs) và khung năng lực lõi/lãnh đạo. Tổ chức đào tạo và chạy thử giao mục tiêu cho toàn công ty.</p>
+                            <p class="mt-2 text-2xl font-semibold" contenteditable="true">Kết quả: Hệ thống PMS v1.0 &amp; Khung năng lực v1.0.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == SLIDE 15: Talent Acquisition (Trước là Slide 12) == -->
+            <div class="slide" id="slide-15" data-notes="Slide này chốt lại Sprint bằng việc xây dựng 'cỗ máy' tuyển dụng. Đây là cách đảm bảo những nền tảng đã xây sẽ được tiếp nối bởi những con người phù hợp.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-6" contenteditable="true">Sprint Module 3: Xây Dựng "Cỗ Máy" Thu Hút Nhân Tài</h2>
+                    <p class="text-2xl mb-8 max-w-4xl" contenteditable="true">Sau khi có tiêu chuẩn (Văn hóa, Năng lực), chúng ta cần công cụ để tuyển đúng người.</p>
+                    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 text-left build">
+                        <div class="space-y-4 build-item p-4">
+                            <h3 class="text-3xl font-semibold" contenteditable="true">1. Chuẩn hóa Quy trình</h3>
+                            <p class="text-xl" contenteditable="true">Thiết lập các bước tuyển dụng rõ ràng, nhất quán cho mọi vị trí.</p>
+                        </div>
+                        <div class="space-y-4 build-item p-4">
+                            <h3 class="text-3xl font-semibold text-orange-400" contenteditable="true">2. Xây dựng Định vị Giá trị Nhân viên (EVP)</h3>
+                            <p class="text-xl" contenteditable="true">Trả lời câu hỏi: "Tại sao một người tài nên làm việc cho Hoan TT?".</p>
+                        </div>
+                        <div class="space-y-4 build-item p-4">
+                            <h3 class="text-3xl font-semibold" contenteditable="true">3. Xây dựng Bộ câu hỏi Phỏng vấn theo Năng lực (BEI)</h3>
+                            <p class="text-xl" contenteditable="true">Cung cấp công cụ để đánh giá ứng viên dựa trên hành vi thực tế, không phải lời nói.</p>
+                        </div>
+                    </div>
+                    <p class="mt-8 text-2xl font-semibold build-item" contenteditable="true">Kết quả: Hệ thống Tuyển dụng v1.0 sẵn sàng hoạt động.</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 16: Sprint Summary (Trước là Slide 13) == -->
+            <div class="slide slide-bg-model" id="slide-16" data-notes="Tổng kết Sprint 4 tháng. Hình ảnh từ 'hỗn loạn' sang 'hệ thống' thể hiện giá trị to lớn mà giai đoạn Sprint mang lại.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-10" contenteditable="true">Tổng Kết Giai Đoạn 1: Kết Quả Sau 4 Tháng Sprint</h2>
+                    <div class="flex items-center justify-center gap-8 max-w-4xl build">
+                        <div class="text-center build-item">
+                            <p class="text-3xl mb-2" contenteditable="true">Trước GĐ 1</p>
+                            <i class="fas fa-wind text-8xl text-gray-500"></i>
+                            <p class="mt-4 text-2xl" contenteditable="true">Hỗn loạn, cảm tính, thiếu nền tảng</p>
+                        </div>
+                        <div class="build-item">
+                            <i class="fas fa-arrow-right-long text-6xl text-orange-400 mx-8"></i>
+                        </div>
+                        <div class="text-center build-item">
+                            <p class="text-3xl mb-2" contenteditable="true">Sau GĐ 1</p>
+                            <i class="fas fa-building-shield text-8xl text-teal-400"></i>
+                            <p class="mt-4 text-2xl" contenteditable="true">Có "Hệ Điều Hành Doanh Nghiệp v1.0"</p>
+                        </div>
+                    </div>
+                    <p class="mt-10 text-3xl font-semibold build-item" contenteditable="true">Tổ chức đã có nền tảng vững chắc để vận hành hiệu quả và mở rộng quy mô.</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 17: MODULE 2 TITLE (Trước là Slide 14) == -->
+            <div class="slide slide-bg-structure" id="slide-17" data-notes="Bắt đầu Giai đoạn 2. Sau khi xây xong 'bộ khung', giờ là lúc 'lắp máy' và 'tinh chỉnh'.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <p class="text-2xl tracking-widest" contenteditable="true">GIAI ĐOẠN 2: THÁNG 5-9</p>
+                    <h1 class="text-6xl text-orange-400 my-4" contenteditable="true">Vận Hành &amp; Tối Ưu</h1>
+                    <p class="text-3xl max-w-4xl mx-auto" contenteditable="true">Mục tiêu: Đưa "Hệ Điều Hành v1.0" vào thực tế, tinh chỉnh và xây dựng các cấu phần nâng cao để tạo ra sự Công bằng &amp; Động lực.</p>
+                </div>
+            </div>
+            
+            <!-- == SLIDE 18: 3P Compensation (Trước là Slide 15) == -->
+            <div class="slide slide-bg-model" id="slide-18" data-notes="Hệ thống lương 3P được đặt ở đây là hợp lý, vì nó cần dữ liệu từ hệ thống đánh giá hiệu suất và khung năng lực đã xây trong GĐ1.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-6" contenteditable="true">Xây Dựng Hệ Thống Lương 3P: Trụ Cột Của Sự Công Bằng</h2>
+                    <p class="text-2xl mb-8 max-w-4xl" contenteditable="true">Để giải quyết trực diện tỷ lệ nghỉ việc <span class="text-red-400 font-bold">25%/năm</span>, chính sách lương thưởng phải gắn kết với các hệ thống đã xây dựng.</p>
+                    <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6 text-center build">
+                        <div class="bg-indigo-900/50 p-6 rounded-lg build-item">
+                            <h3 class="text-4xl font-bold text-orange-400">P1: Vị Trí</h3>
+                            <h4 class="text-2xl font-semibold mt-2" contenteditable="true">Pay for Position</h4>
+                            <p class="text-xl mt-2" contenteditable="true">Xây dựng ngạch bậc, dải lương dựa trên Sơ đồ tổ chức.</p>
+                        </div>
+                        <div class="bg-indigo-900/50 p-6 rounded-lg build-item">
+                            <h3 class="text-4xl font-bold text-orange-400">P2: Năng Lực</h3>
+                            <h4 class="text-2xl font-semibold mt-2" contenteditable="true">Pay for Person</h4>
+                            <p class="text-xl mt-2" contenteditable="true">Gắn với Khung năng lực. Người giỏi hơn được trả cao hơn.</p>
+                        </div>
+                        <div class="bg-indigo-900/50 p-6 rounded-lg build-item">
+                            <h3 class="text-4xl font-bold text-orange-400">P3: Thành Tích</h3>
+                            <h4 class="text-2xl font-semibold mt-2" contenteditable="true">Pay for Performance</h4>
+                            <p class="text-xl mt-2" contenteditable="true">Gắn với kết quả OKRs/KPIs. Thưởng cho người đóng góp vượt trội.</p>
+                        </div>
+                    </div>
+                    <p class="mt-6 text-2xl font-semibold build-item" contenteditable="true">Kết quả: Quy chế Lương &amp; Thưởng v1.0 minh bạch, công bằng.</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 19: Implementation & Career Path (Trước là Slide 16) == -->
+            <div class="slide align-center-left" id="slide-19" data-notes="Slide này thể hiện sự đồng hành trong việc áp dụng thực tế và xây dựng lộ trình phát triển - câu trả lời cho bài toán giữ chân nhân tài.">
+                <div class="w-full">
+                    <h2 class="text-4xl font-bold mb-10 text-center" contenteditable="true">Đưa Hệ Thống Vào Cuộc Sống</h2>
+                    <div class="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-left build">
+                        <div class="build-item">
+                            <h3 class="text-3xl font-semibold text-indigo-300 flex items-center gap-3"><i class="fas fa-cogs"></i> Triển Khai &amp; Tinh Chỉnh</h3>
+                            <p class="mt-2 text-2xl" contenteditable="true">Giám sát, hỗ trợ các phòng ban áp dụng hệ thống OKRs/KPIs, RACI. Thu thập phản hồi và tinh chỉnh quy trình cho phù hợp với thực tế.</p>
+                            <p class="mt-2 text-2xl" contenteditable="true">Tổ chức các buổi đào tạo bổ sung cho cấp quản lý.</p>
+                        </div>
+                        <div class="build-item">
+                            <h3 class="text-3xl font-semibold text-purple-400 flex items-center gap-3"><i class="fas fa-road"></i> Xây Dựng Lộ Trình Phát Triển</h3>
+                            <p class="mt-2 text-2xl" contenteditable="true">Dựa trên Khung năng lực và Sơ đồ tổ chức, xây dựng các lộ trình phát triển sự nghiệp (Career Path) mẫu cho các vị trí then chốt.</p>
+                            <p class="mt-2 text-2xl font-semibold" contenteditable="true">Kết quả: Khung Lộ trình phát triển v1.0, tạo động lực cho nhân viên.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == SLIDE 20: MODULE 3 TITLE (Trước là Slide 17) == -->
+            <div class="slide slide-bg-structure" id="slide-20" data-notes="Giai đoạn cuối cùng: nhìn lại và hướng tới tương lai.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <p class="text-2xl tracking-widest" contenteditable="true">GIAI ĐOẠN 3: THÁNG 10-12</p>
+                    <h1 class="text-6xl text-orange-400 my-4" contenteditable="true">Đo Lường &amp; Bền Vững</h1>
+                    <p class="text-3xl max-w-3xl mx-auto" contenteditable="true">Mục tiêu: Đánh giá tác động của chương trình chuyển đổi, chứng minh hiệu quả và xây dựng kế hoạch cho sự phát triển liên tục.</p>
+                </div>
+            </div>
+            
+            <!-- == SLIDE 21: Final Measurement (Trước là Slide 18) == -->
+            <div class="slide align-top-left" id="slide-21" data-notes="Đo lường là bước cuối cùng và quan trọng nhất. Biểu đồ so sánh trước và sau thể hiện tác động của dự án một cách trực quan.">
+                <div class="w-full">
+                    <h2 class="text-4xl font-bold mb-8 text-center" contenteditable="true">Đo Lường Hiệu Quả &amp; Lập Kế Hoạch Năm 2</h2>
+                    <div class="w-full max-w-6xl flex flex-col md:flex-row items-center gap-8">
+                        <div class="md:w-1/2 w-full h-80 bg-white/90 p-4 rounded-lg shadow-lg">
+                            <canvas id="kpiChart"></canvas>
+                        </div>
+                        <div class="md:w-1/2 text-left space-y-6 build">
+                            <div class="build-item">
+                                <h3 class="text-3xl font-semibold" contenteditable="true">Đo Lường Các Chỉ Số Chiến Lược</h3>
+                                <p class="text-2xl" contenteditable="true">Thực hiện lại Khảo sát Sức khỏe Tổ chức và đo lường chỉ số eNPS để so sánh với kết quả đầu vào.</p>
+                            </div>
+                            <div class="build-item">
+                                <h3 class="text-3xl font-semibold" contenteditable="true">Tổng kết và Kế hoạch Hành động</h3>
+                                <p class="text-2xl" contenteditable="true">Phân tích kết quả, trình bày báo cáo tổng kết ROI của dự án và lập Kế hoạch Hành động Nhân sự cho Năm 2.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == SLIDE 22: The Philosophy (Trước là Slide 19) == -->
+            <div class="slide slide-bg-model" id="slide-22" data-notes="Triết lý này càng trở nên quan trọng trong lộ trình tăng tốc. Nó cho thấy dù 'Sprint' xây dựng rất nhanh, việc 'Hỗ trợ' vẫn luôn song hành.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h2 class="text-4xl font-bold mb-8" contenteditable="true">Triết Lý Hợp Tác "Partner HR"</h2>
+                    <div class="w-full max-w-5xl flex flex-col md:flex-row items-center gap-8">
+                        <div class="md:w-1/2 text-left space-y-6 build">
+                            <div class="build-item">
+                                <h3 class="text-3xl font-semibold text-indigo-300" contenteditable="true">Xây Nền Tảng (60%)</h3>
+                                <p class="text-2xl" contenteditable="true">Xây dựng các trụ cột hệ thống (Văn hóa, Tổ chức, Năng lực, Lương thưởng) cho sự phát triển dài hạn.</p>
+                            </div>
+                            <div class="build-item">
+                                <h3 class="text-3xl font-semibold text-orange-400" contenteditable="true">Hỗ Trợ &amp; Gỡ Rối (40%)</h3>
+                                <p class="text-2xl" contenteditable="true">Giải quyết các vấn đề "nóng", tạo ra kết quả thấy ngay (Quick Wins) để duy trì động lực và giải quyết nỗi đau trước mắt.</p>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 build-item flex justify-center">
+                            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto max-w-xs">
+                                <path d="M100,20C144.18,20,180,55.82,180,100C180,144.18,144.18,180,100,180C55.82,180,20,144.18,20,100C20,55.82,55.82,20,100,20Z" fill="rgba(92, 107, 192, 0.5)"></path>
+                                <path d="M100,30C138.66,30,170,61.34,170,100C170,138.66,138.66,170,100,170C61.34,170,30,138.66,30,100C30,61.34,61.34,30,100,30Z" fill="rgba(255, 152, 0, 0.7)"></path>
+                                <text x="100" y="95" font-family="Oswald" font-size="18" fill="white" text-anchor="middle" font-weight="bold">XÂY</text>
+                                <text x="100" y="115" font-family="Oswald" font-size="18" fill="white" text-anchor="middle" font-weight="bold">HỖ TRỢ</text>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="mt-6 text-2xl font-semibold build-item" contenteditable="true">Logic xuyên suốt: Dùng vấn đề "nóng" làm bài tập thực tế để áp dụng ngay hệ thống đang xây.</p>
+                </div>
+            </div>
+
+            <!-- == SLIDE 23: Deliverables Summary (Trước là Slide 20) == -->
+            <div class="slide align-top-left" id="slide-23" data-notes="Slide này được cấu trúc lại hoàn toàn để thể hiện sản phẩm đầu ra theo từng giai đoạn của lộ trình mới. Đây là bằng chứng rõ ràng nhất cho việc đáp ứng yêu cầu của khách hàng.">
+                <div class="w-full">
+                    <h2 class="text-4xl font-bold mb-6 text-center" contenteditable="true">Tổng Hợp Sản Phẩm Đầu Ra Theo Lộ Trình Mới</h2>
+                    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-4 text-left build">
+                        <div class="bg-orange-900/50 p-4 rounded-lg border-2 border-orange-700 build-item">
+                            <h3 class="font-bold text-xl text-orange-300" contenteditable="true">GĐ 1: SPRINT NỀN TẢNG (TH 1-4)</h3>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-lg">
+                                <li contenteditable="true">Báo cáo Chẩn đoán Sức khỏe Tổ chức</li>
+                                <li contenteditable="true">Tuyên bố Tầm nhìn, Sứ mệnh, Giá trị</li>
+                                <li contenteditable="true">Sổ tay Văn hóa v1.0</li>
+                                <li contenteditable="true">Sơ đồ Tổ chức v1.0 &amp; MTCV cấp phòng ban</li>
+                                <li contenteditable="true">Ma trận Phân quyền RACI (5 quy trình lõi)</li>
+                                <li contenteditable="true">Hệ thống Quản trị Thành tích (PMS) v1.0</li>
+                                <li contenteditable="true">Từ điển Năng lực v1.0 (Lõi &amp; Lãnh đạo)</li>
+                                <li contenteditable="true">Hệ thống Tuyển dụng v1.0 &amp; EVP</li>
+                                <li contenteditable="true">Bộ câu hỏi phỏng vấn theo năng lực (BEI)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-indigo-900/50 p-4 rounded-lg build-item">
+                            <h3 class="font-bold text-xl text-indigo-300" contenteditable="true">GĐ 2: VẬN HÀNH &amp; TỐI ƯU (TH 5-9)</h3>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-lg">
+                                <li contenteditable="true">Hệ thống Lương 3P v1.0 &amp; Dải lương</li>
+                                <li contenteditable="true">Quy chế Lương &amp; Thưởng v1.0</li>
+                                <li contenteditable="true">Khung Lộ trình Phát triển (Career Path) v1.0</li>
+                                <li contenteditable="true">Các chương trình đào tạo &amp; coaching cho quản lý</li>
+                                <li contenteditable="true">Hỗ trợ triển khai và tinh chỉnh hệ thống</li>
+                            </ul>
+                        </div>
+                        <div class="bg-teal-900/50 p-4 rounded-lg build-item">
+                            <h3 class="font-bold text-xl text-teal-300" contenteditable="true">GĐ 3: ĐO LƯỜNG &amp; BỀN VỮNG (TH 10-12)</h3>
+                            <ul class="list-disc list-inside mt-2 space-y-1 text-lg">
+                                <li contenteditable="true">Báo cáo Gắn kết (eNPS) Trước - Sau</li>
+                                <li contenteditable="true">Báo cáo Phân tích Tỷ lệ Nghỉ việc</li>
+                                <li contenteditable="true">Báo cáo tổng kết ROI dự án</li>
+                                <li contenteditable="true">Kế hoạch Hành động Nhân sự Năm 2</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == [NÂNG CẤP] SLIDE 24: Call to Commitment (Thay cho Q&A) == -->
+            <div class="slide slide-bg-cta" id="slide-24" data-notes="Mục tiêu: Biến một slide thụ động (Q&amp;A) thành một slide chủ động ('Nhiệt huyết', 'Gắn kết'). Nó tạo ra một khoảnh khắc 'chạm', biến buổi họp thành một lễ 'cam kết' (commitment ceremony), ràng buộc mọi người với nhau vì mục tiêu chung.">
+                <div class="w-full h-full flex flex-col justify-center items-center text-center">
+                    <h1 class="text-6xl font-bold text-white mb-10" contenteditable="true" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.5);">Sự Thay Đổi Bắt Đầu Từ Cam Kết Của Chúng Ta</h1>
+                    <div class="w-full max-w-6xl text-left space-y-6 build text-2xl">
+                        <div class="build-item">
+                            <h3 class="font-semibold text-orange-300" contenteditable="true">Cam kết của Build Talents (Rosie):</h3>
+                            <p class="text-white/90" contenteditable="true">"Chúng tôi cam kết đồng hành, lắng nghe, và cung cấp công cụ tốt nhất để các bạn thành công."</p>
+                        </div>
+                        <div class="build-item">
+                            <h3 class="font-semibold text-teal-300" contenteditable="true">Cam kết của Lãnh đạo Cấp cao (CEO Hoan TT):</h3>
+                            <p class="text-white/90" contenteditable="true">"[CEO Hoan TT sẽ nói câu này] Tôi cam kết theo đuổi lộ trình này, cung cấp nguồn lực và bảo trợ cho sự thay đổi."</p>
+                        </div>
+                        <div class="build-item">
+                            <h3 class="font-semibold text-indigo-300" contenteditable="true">Lời kêu gọi Quản lý (Các bạn):</h3>
+                            <p class="text-white/90" contenteditable="true">"Chúng tôi cần cam kết của các bạn: sự cởi mở, sự tham gia, và nhiệt huyết để dẫn dắt đội ngũ của mình."</p>
+                        </div>
+                    </div>
+                    <div class="mt-12 border-t-2 border-orange-400 w-24 build-item"></div>
+                    <h2 class="text-4xl text-white mt-8 build-item" contenteditable="true">Câu hỏi đầu tiên, và cũng là cam kết đầu tiên của bạn là gì?</h2>
+                </div>
+            </div>
+            
+        </div> <!-- Kết thúc #slide-deck -->
+
+        <!-- == BEGIN CONTROLS WRAPPER == -->
+        <!-- Thanh công cụ, thanh tiến trình, số trang (Bên ngoài thẻ) -->
+        
+        <!-- Thanh công cụ chính -->
+        <div id="controls-wrapper">
+            <div class="flex items-center justify-center p-2 rounded-full bg-black/30 backdrop-blur-sm">
+                <!-- Các nút chức năng -->
+                <button id="fullscreen-btn" class="control-btn" title="Toàn màn hình (F)">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button id="speaker-btn" class="control-btn" title="Chế độ Diễn giả (P)">
+                    <i class="fas fa-user-tie"></i>
+                </button>
+                <button id="export-btn" class="control-btn" title="Xuất file...">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button id="ai-btn" class="control-btn" title="Trợ lý Sáng tạo AI">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </button>
+                
+                <!-- Thanh tiến trình (Chấm) -->
+                <div id="progress-bar" class="flex items-center mx-4">
+                    <!-- Các chấm sẽ được tự động thêm bằng JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Số trang -->
+        <div id="slide-number" class="text-lg font-medium text-white/50"></div>
+
+    </div> <!-- Kết thúc #presentation-container -->
+
+
+    <!-- == BEGIN MODALS == -->
+    
+    <!-- Modal Xuất file -->
+    <div id="export-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-6 text-orange-400">Xuất Bản Trình Bày</h3>
+            <p class="mb-4">Chọn các slide bạn muốn xuất:</p>
+            <div id="export-slide-list" class="max-h-64 overflow-y-auto mb-6 bg-black/20 p-4 rounded">
+                <!-- Danh sách slide sẽ được JS chèn vào đây -->
+            </div>
+            <div class="flex justify-between">
+                <div>
+                    <button id="export-select-all" class="py-2 px-4 bg-blue-600 rounded hover:bg-blue-500">Chọn tất cả</button>
+                    <button id="export-select-none" class="py-2 px-4 bg-gray-600 rounded hover:bg-gray-500 ml-2">Bỏ chọn</button>
+                </div>
+                <div>
+                    <button id="export-html-btn" class="py-2 px-5 bg-green-600 rounded hover:bg-green-500 font-bold">Xuất HTML</button>
+                    <button id="export-pdf-btn" class="py-2 px-5 bg-red-600 rounded hover:bg-red-500 font-bold ml-2">Xuất PDF</button>
+                    <button id="export-cancel-btn" class="py-2 px-4 bg-gray-700 rounded hover:bg-gray-600 ml-4">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal AI Assistant -->
+    <div id="ai-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold mb-6 text-orange-400">
+                <i class="fas fa-wand-magic-sparkles mr-2"></i>Trợ lý Sáng tạo AI
+            </h3>
+            <p class="mb-4 text-lg">Tính năng này đang được phát triển!</p>
+            <p class="mb-6 text-gray-300">Trong tương lai, bạn có thể yêu cầu AI:
+                </p><ul class="list-disc pl-6 mt-2">
+                    <li>"Viết lại tiêu đề này cho ấn tượng hơn."</li>
+                    <li>"Tìm một hình ảnh minh họa cho ý tưởng 'hợp tác'."</li>
+                    <li>"Tóm tắt các gạch đầu dòng này thành 3 từ khóa."</li>
+                </ul>
+            <p></p>
+            <button id="ai-cancel-btn" class="py-2 px-5 bg-blue-600 rounded hover:bg-blue-500 w-full">Đã hiểu</button>
+        </div>
+    </div>
+    
+    <!-- Modal Thông báo (Chung) -->
+    <div id="message-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="message-title" class="text-2xl font-bold mb-4 text-yellow-400">Thông báo</h3>
+            <p id="message-text" class="text-lg mb-6">...</p>
+            <button id="message-ok-btn" class="py-2 px-5 bg-blue-600 rounded hover:bg-blue-500 w-full">OK</button>
+        </div>
+    </div>
+
+    <!-- == END MODALS == -->
+
+
+    <!-- Footer Bản quyền (Bên ngoài cùng) -->
+    <footer id="main-footer">
+        Học Liệu cho đào tạo. Bản quyền thuộc Rosie Đào Hạnh Giang CEO Build Talents
+    </footer>
+
+
+    <!-- == BEGIN JAVASCRIPT LOGIC == -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // === KHỞI TẠO BIẾN ===
+            const slides = Array.from(document.querySelectorAll('.slide'));
+            const slideDeck = document.getElementById('slide-deck');
+            const progressBar = document.getElementById('progress-bar');
+            const slideNumberEl = document.getElementById('slide-number');
+            const prevBtn = document.getElementById('prev-nav-btn');
+            const nextBtn = document.getElementById('next-nav-btn');
+            
+            // Nút điều khiển
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const speakerBtn = document.getElementById('speaker-btn');
+            const exportBtn = document.getElementById('export-btn');
+            const aiBtn = document.getElementById('ai-btn');
+
+            // Modal
+            const exportModal = document.getElementById('export-modal');
+            const exportSlideList = document.getElementById('export-slide-list');
+            const exportCancelBtn = document.getElementById('export-cancel-btn');
+            const exportHtmlBtn = document.getElementById('export-html-btn');
+            const exportPdfBtn = document.getElementById('export-pdf-btn');
+            const exportSelectAll = document.getElementById('export-select-all');
+            const exportSelectNone = document.getElementById('export-select-none');
+            const aiModal = document.getElementById('ai-modal');
+            const aiCancelBtn = document.getElementById('ai-cancel-btn');
+            const messageModal = document.getElementById('message-modal');
+            const messageTitle = document.getElementById('message-title');
+            const messageText = document.getElementById('message-text');
+            const messageOkBtn = document.getElementById('message-ok-btn');
+
+            let currentSlide = 0;
+            let currentBuild = 0;
+            let speakerWindow = null;
+            let kpiChartInstance = null; // Biến để lưu trữ biểu đồ
+
+            // === [SỬA LỖI] HÀM KIỂM TRA LOCALSTORAGE ===
+            /**
+             * Kiểm tra xem localStorage có khả dụng và có thể truy cập không.
+             * @returns {boolean} True nếu localStorage khả dụng.
+             */
+            function isLocalStorageAvailable() {
+                let storage;
+                try {
+                    storage = window.localStorage;
+                    const x = '__storage_test__';
+                    storage.setItem(x, x);
+                    storage.removeItem(x);
+                    return true;
+                } catch (e) {
+                    return e instanceof DOMException && (
+                        // Mọi thứ trừ Firefox
+                        e.code === 22 ||
+                        // Firefox
+                        e.code === 1014 ||
+                        // Tên mã lỗi cũng có thể được kiểm tra
+                        e.name === 'QuotaExceededError' ||
+                        e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+                        // Kiểm tra xem đã có gì trong storage chưa
+                        (storage && storage.length !== 0);
+                }
+            }
+            const storageAvailable = isLocalStorageAvailable();
+            // ===============================================
+
+            // === HÀM KHỞI TẠO ===
+            function init() {
+                // 1. Tải trạng thái từ localStorage
+                loadState();
+                
+                // 2. Tạo Thanh tiến trình (Chấm)
+                slides.forEach((_, i) => {
+                    const dot = document.createElement('span');
+                    dot.classList.add('progress-dot');
+                    dot.dataset.slide = i;
+                    dot.addEventListener('click', () => showSlide(i, true)); // Click vào chấm là show hết, k build
+                    progressBar.appendChild(dot);
+                });
+
+                // 3. Khởi tạo danh sách slide cho modal export
+                initExportModal();
+
+                // 4. Hiển thị slide đầu tiên
+                showSlide(currentSlide, true); // true = force, không có build
+                
+                // 5. Gắn các sự kiện
+                addEventListeners();
+            }
+
+            // === HÀM XỬ LÝ SLIDE ===
+
+            /**
+             * Hiển thị một slide cụ thể
+             * @param {number} index - Chỉ số của slide
+             * @param {boolean} forceShow - (Tùy chọn) true để bỏ qua build animation
+             */
+            function showSlide(index, forceShow = false) {
+                if (index < 0 || index >= slides.length) {
+                    console.warn(`Slide index ${index} out of bounds.`);
+                    return;
+                }
+
+                // === [SỬA LỖI HIỂN THỊ] LOGIC MỚI, AN TOÀN HƠN ===
+                // 1. Lấy slide cũ TRƯỚC khi cập nhật index
+                const oldSlide = slides[currentSlide];
+
+                // 2. Dọn dẹp trạng thái của TẤT CẢ các slide để đảm bảo sạch sẽ
+                //    Điều này ngăn chặn lỗi nhiều slide cùng có class 'active' hoặc 'prev'
+                slides.forEach(slide => {
+                    slide.classList.remove('active', 'prev');
+                });
+
+                // 3. Cập nhật index và lấy slide mới
+                currentSlide = index;
+                const newSlide = slides[currentSlide];
+
+                // 4. Áp dụng trạng thái mới
+                if (oldSlide && oldSlide !== newSlide) {
+                    oldSlide.classList.add('prev'); // Slide cũ trở thành nền cho hiệu ứng
+                }
+                newSlide.classList.add('active'); // Slide mới được kích hoạt
+                // === KẾT THÚC SỬA LỖI ===
+
+                // [CẢI TIẾN] Khởi tạo/Render lại biểu đồ NẾU slide này chứa biểu đồ
+                if (newSlide.querySelector('#kpiChart')) {
+                    setTimeout(initCharts, 50); 
+                }
+
+                // Reset build animation
+                currentBuild = 0;
+                const buildItems = newSlide.querySelectorAll('.build-item');
+                buildItems.forEach(item => {
+                    if (forceShow) {
+                        item.classList.add('visible');
+                    } else {
+                        item.classList.remove('visible');
+                    }
+                });
+                if (forceShow) currentBuild = buildItems.length;
+
+                // Cập nhật giao diện
+                updateUI();
+                
+                // Cập nhật Chế độ Diễn giả
+                updateSpeakerView();
+                
+                // Lưu trạng thái
+                saveState();
+            }
+
+            /**
+             * Logic cho bước tiếp theo (Next)
+             * Ưu tiên build animation trước khi chuyển slide
+             */
+            function nextStep() {
+                const currentSlideEl = slides[currentSlide];
+                const buildItems = currentSlideEl.querySelectorAll('.build-item');
+                
+                if (currentBuild < buildItems.length) {
+                    // Còn build items, hiển thị item tiếp theo
+                    buildItems[currentBuild].classList.add('visible');
+                    currentBuild++;
+                    updateSpeakerViewBuild(); // Cập nhật build cho speaker
+                } else {
+                    // Hết build items, chuyển slide tiếp theo
+                    if (currentSlide < slides.length - 1) {
+                        showSlide(currentSlide + 1);
+                    }
+                }
+                updateUI(); // Cập nhật UI sau mỗi bước next
+            }
+
+            /**
+             * Logic cho bước lùi (Previous)
+             */
+            function prevStep() {
+                 const currentSlideEl = slides[currentSlide];
+                const buildItems = currentSlideEl.querySelectorAll('.build-item');
+
+                if (currentBuild > 0) {
+                    // Nếu đang build, thì lùi 1 build
+                    currentBuild--;
+                    buildItems[currentBuild].classList.remove('visible');
+                    updateSpeakerViewBuild();
+                } else {
+                    // Nếu đã ở build 0, lùi slide
+                    if (currentSlide > 0) {
+                        showSlide(currentSlide - 1, true); // Lùi slide và show hết
+                    }
+                }
+                updateUI(); // Cập nhật UI sau mỗi bước prev
+            }
+            
+            /**
+             * Cập nhật các thành phần UI (Chấm, Số trang)
+             */
+            function updateUI() {
+                // Cập nhật số trang
+                slideNumberEl.textContent = `${currentSlide + 1} / ${slides.length}`;
+                
+                // Cập nhật chấm tiến trình
+                const dots = document.querySelectorAll('.progress-dot');
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentSlide);
+                });
+                
+                // Ẩn/hiện nút điều hướng
+                prevBtn.style.visibility = (currentSlide === 0) ? 'hidden' : 'visible';
+                
+                // Ẩn nút Next nếu ở slide cuối CÙNG VỚI build cuối cùng
+                const buildItems = slides[currentSlide].querySelectorAll('.build-item');
+                const isLastSlide = (currentSlide === slides.length - 1);
+                const isLastBuild = (currentBuild === buildItems.length);
+                
+                if (isLastSlide && isLastBuild) {
+                    nextBtn.style.visibility = 'hidden';
+                } else {
+                    nextBtn.style.visibility = 'visible';
+                }
+            }
+
+            // === HÀM LƯU/TẢI TRẠNG THÁI (localStorage) ===
+            
+            function saveState() {
+                // [SỬA LỖI] Chỉ thực thi nếu localStorage có sẵn
+                if (!storageAvailable) return;
+                
+                localStorage.setItem('presentation_HoanTT_currentSlide', currentSlide);
+            }
+
+            function loadState() {
+                // [SỬA LỖI] Chỉ thực thi nếu localStorage có sẵn
+                if (!storageAvailable) {
+                    console.warn("localStorage không khả dụng. Tính năng lưu trạng thái bị vô hiệu hóa.");
+                    return;
+                }
+
+                currentSlide = parseInt(localStorage.getItem('presentation_HoanTT_currentSlide') || '0', 10);
+                if (isNaN(currentSlide) || currentSlide >= slides.length) currentSlide = 0;
+
+                // Tải nội dung contenteditable
+                document.querySelectorAll('[contenteditable="true"]').forEach((el, index) => {
+                    const slideId = el.closest('.slide').id || `slide-${index}`;
+                    const id = el.dataset.id || `${slideId}-editable-${index}`;
+                    el.dataset.id = id; // Gán ID nếu chưa có
+                    
+                    const savedContent = localStorage.getItem(`presentation_HoanTT_content_${id}`);
+                    if (savedContent) {
+                        el.innerHTML = savedContent;
+                    }
+                    
+                    // Thêm sự kiện để lưu khi thay đổi
+                    el.addEventListener('input', () => {
+                        // [SỬA LỖI] Kiểm tra lại trước khi lưu
+                        if (storageAvailable) {
+                            localStorage.setItem(`presentation_HoanTT_content_${id}`, el.innerHTML);
+                        }
+                    }, false);
+                });
+            }
+            
+            // === HÀM XỬ LÝ BIỂU ĐỒ (Chart.js) ===
+            
+            function initCharts() {
+                const kpiCtx = document.getElementById('kpiChart');
+                if (kpiCtx) {
+                    // Kiểm tra xem biểu đồ đã được khởi tạo chưa, nếu có thì hủy đi để vẽ lại
+                    if (kpiChartInstance) {
+                        kpiChartInstance.destroy();
+                    }
+                    
+                    Chart.defaults.font.family = "'Oswald', sans-serif";
+                    Chart.defaults.color = '#333'; // Màu chữ cho biểu đồ
+                    Chart.defaults.font.size = 14;
+
+                    kpiChartInstance = new Chart(kpiCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['eNPS (điểm)', 'Tỷ lệ Giữ chân (%)', 'Thời gian Tuyển dụng (ngày)', 'Mục tiêu Hoàn thành (%)'],
+                            datasets: [{
+                                label: 'Trước Chuyển đổi (Tháng 1)',
+                                data: [10, 75, 60, 50],
+                                backgroundColor: 'rgba(92, 107, 192, 0.6)', // #5C6BC0
+                                borderColor: 'rgba(92, 107, 192, 1)',
+                                borderWidth: 1
+                            }, {
+                                label: 'Mục tiêu (Sau 12 tháng)',
+                                data: [50, 85, 40, 85],
+                                backgroundColor: 'rgba(0, 150, 136, 0.6)', // #009688
+                                borderColor: 'rgba(0, 150, 136, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeOutQuart'
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            },
+                            plugins: {
+                                title: {
+                                    display: false,
+                                },
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // === HÀM TÍNH NĂNG NÂNG CAO (Fullscreen, Speaker, Export) ===
+
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        showMessage('Lỗi', `Không thể bật chế độ toàn màn hình: ${err.message}`);
+                    });
+                    fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                } else {
+                    document.exitFullscreen();
+                    fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                }
+            }
+
+            /**
+             * Mở cửa sổ Chế độ Diễn giả
+             */
+            function openSpeakerView() {
+                if (speakerWindow && !speakerWindow.closed) {
+                    speakerWindow.focus();
+                    return;
+                }
+                
+                speakerWindow = window.open('about:blank', 'speakerView', 'width=1000,height=700');
+                if (!speakerWindow) {
+                    showMessage('Lỗi', 'Không thể mở cửa sổ Diễn giả. Vui lòng cho phép pop-up.');
+                    return;
+                }
+
+                speakerWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Chế độ Diễn giả</title>
+                        <style>
+                            body { font-family: 'Oswald', sans-serif; background: #222; color: white; margin: 0; padding: 0; }
+                            .container { display: flex; width: 100%; height: 100vh; }
+                            .main { flex: 2; padding: 20px; border-right: 1px solid #444; display: flex; flex-direction: column;}
+                            .aside { flex: 1; padding: 20px; display: flex; flex-direction: column; }
+                            h2 { color: #FF9800; border-bottom: 1px solid #555; padding-bottom: 10px; }
+                            #current-slide-view, #next-slide-view { 
+                                width: 100%; 
+                                aspect-ratio: 16 / 9; 
+                                background: #000; 
+                                border: 1px solid #555;
+                                overflow: hidden;
+                                margin-bottom: 10px;
+                            }
+                            .slide-preview-container {
+                                width: 100%;
+                                height: 100%;
+                                transform-origin: top left;
+                            }
+                            #notes { background: #333; padding: 15px; border-radius: 5px; flex-grow: 1; overflow-y: auto; font-size: 1.2rem; line-height: 1.6; }
+                            #timer { font-size: 2.5rem; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="main">
+                                <h2>Slide Hiện tại: <span id="current-slide-num"></span></h2>
+                                <div id="current-slide-view">
+                                    <div id="current-slide-content" class="slide-preview-container"></div>
+                                </div>
+                                <h2>Ghi chú (Notes):</h2>
+                                <div id="notes"></div>
+                            </div>
+                            <div class="aside">
+                                <h2>Slide Tiếp theo: <span id="next-slide-num"></span></h2>
+                                <div id="next-slide-view">
+                                    <div id="next-slide-content" class="slide-preview-container"></div>
+                                </div>
+                                <h2>Thời gian:</h2>
+                                <div id="timer">00:00:00</div>
+                            </div>
+                        </div>
+                        <script>
+                            let startTime = new Date();
+                            function updateTimer() {
+                                if (document.hidden) {
+                                    setTimeout(updateTimer, 1000);
+                                    return;
+                                }
+                                let now = new Date();
+                                let diff = now.getTime() - startTime.getTime();
+                                let h = Math.floor(diff / 3600000);
+                                let m = Math.floor((diff % 3600000) / 60000);
+                                let s = Math.floor((diff % 60000) / 1000);
+                                const timerEl = document.getElementById('timer');
+                                if(timerEl) {
+                                    timerEl.textContent = 
+                                        (h < 10 ? '0' + h : h) + ':' + 
+                                        (m < 10 ? '0' + m : m) + ':' + 
+                                        (s < 10 ? '0' + s : s);
+                                }
+                                setTimeout(updateTimer, 1000);
+                            }
+                            updateTimer();
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                speakerWindow.document.close();
+                
+                updateSpeakerView();
+            }
+
+            /**
+             * Cập nhật nội dung cửa sổ Diễn giả
+             */
+            function updateSpeakerView() {
+                if (!speakerWindow || speakerWindow.closed) {
+                    return;
+                }
+
+                const currentSlideNumEl = speakerWindow.document.getElementById('current-slide-num');
+                const notesView = speakerWindow.document.getElementById('notes');
+                const currentSlideView = speakerWindow.document.getElementById('current-slide-view');
+                const currentSlideContainer = speakerWindow.document.getElementById('current-slide-content');
+                const nextSlideNumEl = speakerWindow.document.getElementById('next-slide-num');
+                const nextSlideView = speakerWindow.document.getElementById('next-slide-view');
+                const nextSlideContainer = speakerWindow.document.getElementById('next-slide-content');
+                
+                if(!currentSlideNumEl || !notesView || !currentSlideView || !currentSlideContainer || !nextSlideNumEl || !nextSlideView || !nextSlideContainer) {
+                    return;
+                }
+
+                const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+                                .map(style => style.outerHTML)
+                                .join('');
+
+                const renderSlide = (container, slideEl, view) => {
+                    const slideClone = slideEl.cloneNode(true);
+                    slideClone.classList.add('active');
+                    slideClone.style.cssText = 'width: 100%; height: 100%; position: relative;';
+                    
+                    container.innerHTML = `<style>${styles}</style>${slideClone.outerHTML}`;
+                    
+                    const scale = view.clientWidth / 1200;
+                    container.style.transform = `scale(${scale})`;
+                    container.style.width = '1200px';
+                    container.style.height = '675px';
+                };
+
+                currentSlideNumEl.textContent = `${currentSlide + 1} / ${slides.length}`;
+                renderSlide(currentSlideContainer, slides[currentSlide], currentSlideView);
+                notesView.innerHTML = slides[currentSlide].dataset.notes || '<em>Không có ghi chú cho slide này.</em>';
+
+                if (currentSlide + 1 < slides.length) {
+                    nextSlideNumEl.textContent = `${currentSlide + 2}`;
+                    renderSlide(nextSlideContainer, slides[currentSlide + 1], nextSlideView);
+                } else {
+                    nextSlideNumEl.textContent = 'Kết thúc';
+                    nextSlideContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: white;">Hết slide.</div>';
+                }
+                
+                updateSpeakerViewBuild();
+            }
+            
+             function updateSpeakerViewBuild() {
+                 if (!speakerWindow || speakerWindow.closed) return;
+                 const currentSlideContainer = speakerWindow.document.getElementById('current-slide-content');
+                 if (!currentSlideContainer) return;
+                 
+                 const speakerBuildItems = currentSlideContainer.querySelectorAll('.build-item');
+                 speakerBuildItems.forEach((item, index) => {
+                     item.style.transition = 'none'; // Tắt transition trong speaker view để cập nhật ngay
+                     if (index < currentBuild) {
+                         item.classList.add('visible');
+                         item.style.opacity = '1';
+                     } else {
+                         item.classList.remove('visible');
+                         item.style.opacity = '0.3';
+                     }
+                 });
+             }
+
+            function initExportModal() {
+                exportSlideList.innerHTML = '';
+                slides.forEach((slide, i) => {
+                    let title = `Slide ${i + 1}`;
+                    const h1 = slide.querySelector('h1');
+                    const h2 = slide.querySelector('h2');
+                    
+                    if (h1 && h1.textContent.trim()) title = h1.textContent.substring(0, 50).trim() + (h1.textContent.length > 50 ? '...' : '');
+                    else if (h2 && h2.textContent.trim()) title = h2.textContent.substring(0, 50).trim() + (h2.textContent.length > 50 ? '...' : '');
+                    else title = `Slide ${i + 1}: (Không có tiêu đề)`;
+
+                    const item = `
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="export-slide-${i}" value="${i}" class="export-slide-check mr-3 w-5 h-5" checked>
+                            <label for="export-slide-${i}" class="text-lg">${title}</label>
+                        </div>
+                    `;
+                    exportSlideList.innerHTML += item;
+                });
+            }
+            
+            function getSelectedSlideIndices() {
+                const checkboxes = document.querySelectorAll('.export-slide-check:checked');
+                return Array.from(checkboxes).map(cb => parseInt(cb.value, 10));
+            }
+
+            function exportHTML() {
+                const selectedIndices = getSelectedSlideIndices();
+                if (selectedIndices.length === 0) {
+                    showMessage('Lỗi', 'Vui lòng chọn ít nhất một slide để xuất.');
+                    return;
+                }
+                
+                showMessage('Đang xử lý...', 'Đang tạo file HTML, vui lòng chờ...');
+
+                let htmlContent = `
+                    <!DOCTYPE html><html lang="vi"><head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Bản Trình Bày (Xuất) - HOAN TT</title>
+                    <script src="https://cdn.tailwindcss.com"><\/script>
+                    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;700&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+                    <style>
+                        ${document.querySelector('style').innerHTML}
+                        body { background: #111; padding: 2rem; }
+                        .slide-export-container { width: 1200px; height: 675px; margin: 2rem auto; border: 2px solid #FF9800; overflow: hidden; position: relative; background: #000; }
+                        .slide { opacity: 1; visibility: visible; transform: scale(1); position: relative; display: flex; }
+                        .build-item { opacity: 1; transform: none; }
+                        #controls-wrapper, #prev-nav-btn, #next-nav-btn, #slide-number, #main-footer, .modal { display: none !important; }
+                    </style>
+                    </head><body>
+                    <h1 class="text-4xl text-white text-center">Bản Trình Bày (Xuất) - HOAN TT</h1>
+                `;
+
+                const chartData = kpiChartInstance ? kpiChartInstance.config.data : {};
+
+                selectedIndices.forEach(index => {
+                    const slide = slides[index];
+                    const slideClone = slide.cloneNode(true);
+                    slideClone.classList.add('active');
+                    slideClone.querySelectorAll('.build-item').forEach(item => item.classList.add('visible'));
+                    
+                    htmlContent += `<div class="slide-export-container"><h2 class="text-xl text-orange-400 text-center mt-4">Slide ${index + 1}</h2>${slideClone.outerHTML}</div>`;
+                });
+
+                htmlContent += `
+                    <script>
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const kpiCtx = document.getElementById('kpiChart');
+                            if (kpiCtx) {
+                                Chart.defaults.font.family = "'Oswald', sans-serif";
+                                Chart.defaults.color = '#333';
+                                Chart.defaults.font.size = 14;
+                                new Chart(kpiCtx, {
+                                    type: 'bar',
+                                    data: ${JSON.stringify(chartData)},
+                                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
+                                });
+                            }
+                        });
+                    <\/script>
+                `;
+
+                htmlContent += '</body></html>';
+                
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'HoanTT_Proposal_Export.html';
+                a.click();
+                URL.revokeObjectURL(a.href);
+                
+                messageModal.classList.remove('visible');
+            }
+
+            /**
+             * Xuất ra file PDF
+             */
+            async function exportPDF() {
+                const selectedIndices = getSelectedSlideIndices();
+                if (selectedIndices.length === 0) {
+                    showMessage('Lỗi', 'Vui lòng chọn ít nhất một slide để xuất.');
+                    return;
+                }
+                
+                showMessage('Đang xử lý...', 'Đang tạo file PDF... Quá trình này có thể mất vài phút. Vui lòng chờ.');
+                exportModal.classList.remove('visible');
+
+                const { jsPDF } = window.jspdf;
+                const slideWidth = 1280;
+                const slideHeight = 720;
+                
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'px',
+                    format: [slideWidth, slideHeight]
+                });
+
+                const originalActive = currentSlide;
+                
+                // [SỬA LỖI] Tạm thời tắt transition để chụp ảnh chính xác
+                slides.forEach(s => s.classList.add('no-transition'));
+                
+                for (let i = 0; i < selectedIndices.length; i++) {
+                    const index = selectedIndices[i];
+                    
+                    // Chuyển đến slide cần chụp
+                    showSlide(index, true);
+                    
+                    // Chờ một chút để DOM cập nhật hoàn toàn
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const canvas = await html2canvas(slideDeck, {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: null, // Giữ nền trong suốt để thấy background của slide
+                        width: slideWidth,
+                        height: slideHeight,
+                        windowWidth: slideWidth,
+                        windowHeight: slideHeight,
+                        // Tắt animation của chartjs khi chụp
+                        onclone: (doc) => {
+                            const chartCanvas = doc.getElementById('kpiChart');
+                            if (chartCanvas && window.Chart.getChart(chartCanvas)) {
+                                window.Chart.getChart(chartCanvas).options.animation = false;
+                            }
+                        }
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    if (i > 0) {
+                        doc.addPage([slideWidth, slideHeight], 'landscape');
+                    }
+                    doc.addImage(imgData, 'PNG', 0, 0, slideWidth, slideHeight);
+                }
+                
+                // [SỬA LỖI] Bật lại transition
+                slides.forEach(s => s.classList.remove('no-transition'));
+
+                doc.save('HoanTT_Proposal_Export.pdf');
+                
+                // Khôi phục slide ban đầu
+                showSlide(originalActive); 
+                messageModal.classList.remove('visible');
+            }
+
+            function showMessage(title, text) {
+                messageTitle.textContent = title;
+                messageText.innerHTML = text;
+                messageModal.classList.add('visible');
+            }
+
+            // === GẮN CÁC SỰ KIỆN ===
+            function addEventListeners() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.isContentEditable) return;
+                    
+                    switch(e.key) {
+                        case 'ArrowRight': case ' ': e.preventDefault(); nextStep(); break;
+                        case 'ArrowLeft': e.preventDefault(); prevStep(); break;
+                        case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
+                        case 'p': case 'P': e.preventDefault(); openSpeakerView(); break;
+                        case 'Escape':
+                            if(exportModal.classList.contains('visible')) exportModal.classList.remove('visible');
+                            if(aiModal.classList.contains('visible')) aiModal.classList.remove('visible');
+                            if(messageModal.classList.contains('visible')) messageModal.classList.remove('visible');
+                            break;
+                    }
+                });
+
+                prevBtn.addEventListener('click', prevStep);
+                nextBtn.addEventListener('click', nextStep);
+                fullscreenBtn.addEventListener('click', toggleFullscreen);
+                speakerBtn.addEventListener('click', openSpeakerView);
+                
+                aiBtn.addEventListener('click', () => aiModal.classList.add('visible'));
+                aiCancelBtn.addEventListener('click', () => aiModal.classList.remove('visible'));
+                messageOkBtn.addEventListener('click', () => messageModal.classList.remove('visible'));
+
+                exportBtn.addEventListener('click', () => {
+                    initExportModal();
+                    exportModal.classList.add('visible');
+                });
+                exportCancelBtn.addEventListener('click', () => exportModal.classList.remove('visible'));
+                exportSelectAll.addEventListener('click', () => document.querySelectorAll('.export-slide-check').forEach(cb => cb.checked = true));
+                exportSelectNone.addEventListener('click', () => document.querySelectorAll('.export-slide-check').forEach(cb => cb.checked = false));
+                exportHtmlBtn.addEventListener('click', exportHTML);
+                exportPdfBtn.addEventListener('click', exportPDF);
+            }
+
+            // === CHẠY HÀM KHỞI TẠO ===
+            init();
+        });
+    </script>
+    
+
+
+</body></html>
